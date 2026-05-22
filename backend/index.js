@@ -129,7 +129,7 @@ app.get('/api/beads', async (_req, res) => {
       if (!convoyMap[beadId]) convoyMap[beadId] = dep.issue_id
     }
 
-    const result = beads.map(b => ({
+    const beadList = beads.map(b => ({
       id: b.id,
       title: b.title,
       description: b.description,
@@ -139,7 +139,12 @@ app.get('/api/beads', async (_req, res) => {
       parent_id: parentMap[b.id] || null
     }))
 
-    res.json(result)
+    const beadIdSet = new Set(beadList.map(b => b.id))
+    const depEdges = deps
+      .filter(d => beadIdSet.has(d.issue_id) && beadIdSet.has(d.depends_on_id))
+      .map(d => ({ from: d.depends_on_id, to: d.issue_id }))
+
+    res.json({ beads: beadList, deps: depEdges })
   } catch (err) {
     res.status(500).json({ error: err.message, stderr: err.stderr || null })
   }
