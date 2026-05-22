@@ -1,13 +1,20 @@
 import express from 'express'
 import cors from 'cors'
-import { execFile } from 'child_process'
+import { execFile, spawn } from 'child_process'
 import { promisify } from 'util'
+import { createReadStream, statSync } from 'fs'
+import { watch } from 'fs'
 
 const execFileAsync = promisify(execFile)
 const app = express()
 const PORT = 3001
 const DOLT_DATA_DIR = process.env.DOLT_DATA_DIR || `${process.env.HOME}/gastown/.dolt-data`
 const SSE_POLL_INTERVAL = parseInt(process.env.SSE_POLL_INTERVAL || '2000', 10)
+const GT_HOME = process.env.GT_HOME || `${process.env.HOME}/gastown`
+const LOG_FILES = {
+  town: `${GT_HOME}/logs/town.log`,
+  daemon: `${GT_HOME}/daemon/daemon.log`,
+}
 
 app.use(cors())
 app.use(express.json())
@@ -188,6 +195,91 @@ app.get('/api/events', (req, res) => {
   sendSSE(res, 'connected', { clientId: id, pollInterval: SSE_POLL_INTERVAL, timestamp: new Date().toISOString() })
 
   req.on('close', () => sseClients.delete(id))
+})
+
+app.get('/api/mq', async (_req, res) => {
+  try {
+    const { stdout } = await execFileAsync('gt', ['mq', 'list', 'beads_ui', '--json'], {
+      env: { ...process.env, HOME: process.env.HOME },
+    })
+    const trimmed = stdout.trim()
+    const entries = (trimmed && trimmed !== 'null') ? JSON.parse(trimmed) : []
+
+    // Augment with polecat branch info from git
+    let branches = []
+    try {
+      const { stdout: brOut } = await execFileAsync('git', ['branch', '--list', 'polecat/*'], {
+        cwd: GT_HOME,
+      })
+      branches = brOut.split('\n')
+        .map(b => b.replace(/^\s*[+*]?\s*/, '').trim())
+        .filter(Boolean)
+        .map(name => {
+          const m = name.match(/polecat\/([^/]+)\/([^@]+)(@.*)?$/)
+          return m ? { branch: name, polecat: m[1], bead_id: m[2], session: m[3] || '' } : { branch: name, polecat: null, bead_id: null, session: '' }
+        })
+    } catch {
+      // git not available in GT_HOME context — skip
+    }
+
+    res.json({ queue: entries || [], branches })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// SSE: stream lines from log files in real-time
+const logSseClients = new Set()
+
+function broadcastLog(source, line) {
+  const msg = JSON.stringify({ source, line, ts: new Date().toISOString() })
+  for (const r of logSseClients) r.write(`data: ${msg}\n\n`)
+}
+
+function tailLogFile(source, filepath) {
+  let fileSize = 0
+  try { fileSize = statSync(filepath).size } catch { return }
+
+  // Stream last 80 lines at startup via tail, then watch for appends
+  const tailProc = spawn('tail', ['-n', '80', filepath])
+  tailProc.stdout.on('data', (chunk) => {
+    const lines = chunk.toString().split('\n').filter(Boolean)
+    for (const l of lines) broadcastLog(source, l)
+  })
+  tailProc.on('close', () => {
+    // After initial tail, watch for new bytes
+    try { fileSize = statSync(filepath).size } catch { fileSize = 0 }
+    watch(filepath, { persistent: false }, () => {
+      let newSize = 0
+      try { newSize = statSync(filepath).size } catch { return }
+      if (newSize <= fileSize) return
+      const stream = createReadStream(filepath, { start: fileSize, end: newSize - 1 })
+      let buf = ''
+      stream.on('data', (chunk) => { buf += chunk.toString() })
+      stream.on('end', () => {
+        fileSize = newSize
+        const lines = buf.split('\n').filter(Boolean)
+        for (const l of lines) broadcastLog(source, l)
+      })
+    })
+  })
+}
+
+// Start tailing logs at startup
+for (const [source, filepath] of Object.entries(LOG_FILES)) {
+  tailLogFile(source, filepath)
+}
+
+app.get('/api/logs/stream', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Connection', 'keep-alive')
+  res.flushHeaders()
+
+  logSseClients.add(res)
+  res.write(`data: ${JSON.stringify({ source: 'system', line: '[log stream connected]', ts: new Date().toISOString() })}\n\n`)
+
+  req.on('close', () => logSseClients.delete(res))
 })
 
 app.listen(PORT, () => {
