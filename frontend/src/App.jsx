@@ -8,6 +8,7 @@ import ReactFlow, {
   addEdge,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
+import TooltipHelp from './components/TooltipHelp'
 
 const initialNodes = [
   {
@@ -93,7 +94,7 @@ function useSSE(onBeadUpdate) {
 }
 
 function App() {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
+  const [nodes, , onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
   const [status, setStatus] = useState('idle')
   const [lastBeadUpdate, setLastBeadUpdate] = useState(null)
@@ -126,7 +127,32 @@ function App() {
           <span className="text-cyber-accent font-mono text-sm font-bold tracking-widest">
             ▸ BEADS UI
           </span>
-          <span className="cyber-badge">Gas Town</span>
+          <span className="cyber-badge inline-flex items-center">
+            Gas Town
+          </span>
+        </div>
+        <div className="flex items-center gap-4 text-xs font-mono text-cyber-dim">
+          <span className="inline-flex items-center gap-0.5">
+            Mayor <TooltipHelp term="Mayor" />
+          </span>
+          <span className="inline-flex items-center gap-0.5">
+            Convoy <TooltipHelp term="Convoy" />
+          </span>
+          <span className="inline-flex items-center gap-0.5">
+            Bead <TooltipHelp term="Bead" />
+          </span>
+          <span className="inline-flex items-center gap-0.5">
+            Polecat <TooltipHelp term="Polecat" />
+          </span>
+          <span className="inline-flex items-center gap-0.5">
+            Refinery <TooltipHelp term="Refinery" />
+          </span>
+          <span className="inline-flex items-center gap-0.5">
+            Wisp <TooltipHelp term="Wisp" />
+          </span>
+          <span className="inline-flex items-center gap-0.5">
+            Witness <TooltipHelp term="Witness" />
+          </span>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-cyber-dim text-xs font-mono">
@@ -168,8 +194,10 @@ function App() {
         </ReactFlow>
       </main>
 
-      <footer className="px-4 py-1 border-t border-cyber-border bg-cyber-surface text-cyber-dim text-xs font-mono">
-        Vite + React 18 + ReactFlow + Tailwind CSS — Cyber/Terminal Theme
+      <footer className="px-4 py-1 border-t border-cyber-border bg-cyber-surface text-cyber-dim text-xs font-mono flex items-center gap-1">
+        Vite + React 18 + ReactFlow + Tailwind CSS — Cyber/Terminal Theme · hover
+        <span className="text-cyber-accent2">?</span>
+        icons for Gas Town glossary
       </footer>
     </div>
   )
