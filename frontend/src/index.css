@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-cyber-bg text-cyber-text font-mono;
+    margin: 0;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+}
+
+@layer components {
+  .cyber-panel {
+    @apply bg-cyber-surface border border-cyber-border rounded;
+  }
+
+  .cyber-badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-mono;
+    @apply border border-cyber-border text-cyber-dim;
+  }
+
+  .cyber-btn {
+    @apply px-3 py-1.5 rounded text-sm font-mono font-medium;
+    @apply bg-cyber-surface border border-cyber-border text-cyber-text;
+    @apply hover:border-cyber-accent hover:text-cyber-accent transition-colors;
+  }
+}
