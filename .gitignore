@@ -4,3 +4,9 @@ backend/node_modules/
 frontend/dist/
 .DS_Store
 *.local
+
+# Gas Town overlay files
+.beads/
+.claude/
+.runtime/
+CLAUDE.md
