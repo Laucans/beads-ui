@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import ReactFlow, {
   MiniMap,
   Controls,
@@ -59,10 +59,50 @@ const initialEdges = [
   { id: 'e2-3', source: '2', target: '3', animated: true, style: { stroke: '#00d4ff' } },
 ]
 
+const API_BASE = 'http://localhost:3001'
+
+function useSSE(onBeadUpdate) {
+  const [sseState, setSseState] = useState('disconnected')
+  const esRef = useRef(null)
+
+  useEffect(() => {
+    function connect() {
+      const es = new EventSource(`${API_BASE}/api/events`)
+      esRef.current = es
+
+      es.addEventListener('connected', () => setSseState('connected'))
+
+      es.addEventListener('bead-update', (e) => {
+        const payload = JSON.parse(e.data)
+        onBeadUpdate(payload)
+      })
+
+      es.onerror = () => {
+        setSseState('reconnecting')
+        es.close()
+        setTimeout(connect, 3000)
+      }
+    }
+    connect()
+    return () => {
+      esRef.current?.close()
+    }
+  }, [onBeadUpdate])
+
+  return sseState
+}
+
 function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
   const [status, setStatus] = useState('idle')
+  const [lastBeadUpdate, setLastBeadUpdate] = useState(null)
+
+  const handleBeadUpdate = useCallback((payload) => {
+    setLastBeadUpdate(payload)
+  }, [])
+
+  const sseState = useSSE(handleBeadUpdate)
 
   const onConnect = useCallback(
     (params) => setEdges((eds) => addEdge(params, eds)),
@@ -71,7 +111,7 @@ function App() {
 
   const fetchStatus = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/status')
+      const res = await fetch(`${API_BASE}/api/status`)
       const data = await res.json()
       setStatus(data.status)
     } catch {
@@ -90,10 +130,21 @@ function App() {
         </div>
         <div className="flex items-center gap-3">
           <span className="text-cyber-dim text-xs font-mono">
-            backend: <span className="text-cyber-accent">{status}</span>
+            sse:{' '}
+            <span className={sseState === 'connected' ? 'text-cyber-accent' : 'text-yellow-400'}>
+              {sseState}
+            </span>
+          </span>
+          {lastBeadUpdate && (
+            <span className="text-cyber-dim text-xs font-mono">
+              upd: <span className="text-cyber-accent">{lastBeadUpdate.changes.length} bead(s)</span>
+            </span>
+          )}
+          <span className="text-cyber-dim text-xs font-mono">
+            api: <span className="text-cyber-accent">{status}</span>
           </span>
           <button className="cyber-btn" onClick={fetchStatus}>
-            ping api
+            ping
           </button>
         </div>
       </header>

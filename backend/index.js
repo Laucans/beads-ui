@@ -7,9 +7,47 @@ const execFileAsync = promisify(execFile)
 const app = express()
 const PORT = 3001
 const DOLT_DATA_DIR = process.env.DOLT_DATA_DIR || `${process.env.HOME}/gastown/.dolt-data`
+const SSE_POLL_INTERVAL = parseInt(process.env.SSE_POLL_INTERVAL || '2000', 10)
 
 app.use(cors())
 app.use(express.json())
+
+// SSE clients: id -> res
+const sseClients = new Map()
+let sseClientId = 0
+// Last known bead statuses: id -> status
+let beadSnapshot = new Map()
+
+function sendSSE(res, event, data) {
+  res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+}
+
+function broadcast(event, data) {
+  for (const res of sseClients.values()) sendSSE(res, event, data)
+}
+
+async function pollBeads() {
+  try {
+    const rows = await doltQuery(
+      'beads_ui',
+      "SELECT id, status FROM issues WHERE issue_type NOT IN ('molecule', 'rig')"
+    )
+    const current = new Map(rows.map(r => [r.id, r.status]))
+    const changes = []
+    for (const [id, status] of current) {
+      const prev = beadSnapshot.get(id)
+      if (prev !== undefined && prev !== status) changes.push({ id, status, prev_status: prev })
+      else if (prev === undefined) changes.push({ id, status, prev_status: null })
+    }
+    if (changes.length > 0) broadcast('bead-update', { changes, timestamp: new Date().toISOString() })
+    beadSnapshot = current
+  } catch (err) {
+    console.error('[sse] poll error:', err.message)
+  }
+}
+
+pollBeads()
+setInterval(pollBeads, SSE_POLL_INTERVAL)
 
 async function doltQuery(database, sql) {
   const fullSql = `USE ${database}; ${sql}`
@@ -137,6 +175,19 @@ app.get('/api/status', (_req, res) => {
 
 app.get('/api/health', (_req, res) => {
   res.json({ healthy: true })
+})
+
+app.get('/api/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Connection', 'keep-alive')
+  res.flushHeaders()
+
+  const id = ++sseClientId
+  sseClients.set(id, res)
+  sendSSE(res, 'connected', { clientId: id, pollInterval: SSE_POLL_INTERVAL, timestamp: new Date().toISOString() })
+
+  req.on('close', () => sseClients.delete(id))
 })
 
 app.listen(PORT, () => {
