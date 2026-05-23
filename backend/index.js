@@ -4,11 +4,15 @@ import { execFile, spawn } from 'child_process'
 import { promisify } from 'util'
 import { createReadStream, statSync } from 'fs'
 import { watch } from 'fs'
+import { fileURLToPath } from 'url'
+import path from 'path'
 
 const execFileAsync = promisify(execFile)
 const app = express()
 const PORT = 3001
 const DOLT_DATA_DIR = process.env.DOLT_DATA_DIR || `${process.env.HOME}/gastown/.dolt-data`
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const REPO_ROOT = path.resolve(__dirname, '..')
 const SSE_POLL_INTERVAL = parseInt(process.env.SSE_POLL_INTERVAL || '2000', 10)
 const GT_HOME = process.env.GT_HOME || `${process.env.HOME}/gastown`
 const LOG_FILES = {
@@ -187,7 +191,6 @@ function parseDoctorOutput(stdout) {
   let summary = { passed: 0, warnings: 0, failed: 0 }
 
   for (const line of lines) {
-    // Main check line: "  ○  <id>...  ✓/⚠/✖  <message>"
     const m = line.match(/^\s+○\s+(\S+?)\.\.\.\s+([✓⚠✖])\s+(.+)/)
     if (m) {
       const [, id, sym, raw] = m
@@ -196,19 +199,16 @@ function parseDoctorOutput(stdout) {
       checks.push({ id, severity, message, detail: null })
       continue
     }
-    // Notice lines (no ✓/⚠/✖): "  ○  <id>...notice: <text>"
     const notice = line.match(/^\s+○\s+(\S+?)\.\.\.notice:\s*(.+)/)
     if (notice) {
       checks.push({ id: notice[1], severity: 'info', message: notice[2].trim(), detail: null })
       continue
     }
-    // Summary: "✓ N passed  ⚠ N warnings  ✖ N failed"
     const sum = line.match(/✓\s+(\d+) passed.*?⚠\s+(\d+) warning.*?✖\s+(\d+) failed/)
     if (sum) {
       summary = { passed: +sum[1], warnings: +sum[2], failed: +sum[3] }
       continue
     }
-    // Detail continuation lines: "        └─ <detail>"
     const detail = line.match(/└[─-]\s+(.+)/)
     if (detail && checks.length > 0) {
       const last = checks[checks.length - 1]
@@ -226,7 +226,6 @@ app.get('/api/doctor', async (_req, res) => {
     const { checks, summary } = parseDoctorOutput(combined)
     res.json({ checks, summary, timestamp: new Date().toISOString() })
   } catch (err) {
-    // gt doctor exits non-zero when issues found — still parse output
     const combined = (err.stdout || '') + (err.stderr || '')
     if (combined.length > 0) {
       const { checks, summary } = parseDoctorOutput(combined)
@@ -244,7 +243,6 @@ app.post('/api/doctor/fix', (req, res) => {
   res.flushHeaders()
 
   const child = spawn('gt', ['doctor', '--fix', '--no-start'], { shell: false })
-
   const send = (type, text) => res.write(`data: ${JSON.stringify({ type, text })}\n\n`)
 
   child.stdout.on('data', d => send('output', d.toString()))
@@ -264,6 +262,35 @@ app.post('/api/wisps/burn', (req, res) => {
     res.json({ ok: true, pid })
   } catch (err) {
     res.status(500).json({ error: err.message })
+  }
+})
+
+app.get('/api/deps', async (_req, res) => {
+  try {
+    const deps = await doltQuery(
+      'beads_ui',
+      "SELECT issue_id, depends_on_id FROM dependencies WHERE type = 'blocks' AND issue_id NOT LIKE '%wisp%' AND depends_on_id NOT LIKE '%wisp%'"
+    )
+    res.json(deps)
+  } catch (err) {
+    res.status(500).json({ error: err.message, stderr: err.stderr || null })
+  }
+})
+
+app.get('/api/bead/:id/commits', async (req, res) => {
+  const { id } = req.params
+  try {
+    const { stdout } = await execFileAsync('git', [
+      '-C', REPO_ROOT,
+      'log', '--oneline', '--all', `--grep=${id}`, '-10'
+    ])
+    const commits = stdout.trim().split('\n').filter(Boolean).map(line => {
+      const sp = line.indexOf(' ')
+      return { hash: line.slice(0, sp), message: line.slice(sp + 1) }
+    })
+    res.json(commits)
+  } catch {
+    res.json([])
   }
 })
 

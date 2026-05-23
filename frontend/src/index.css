@@ -17,9 +17,9 @@
   }
 }
 
-@keyframes bead-pulse {
+@keyframes cyber-pulse {
   0%, 100% { box-shadow: 0 0 4px rgba(0, 212, 255, 0.3); }
-  50%       { box-shadow: 0 0 12px rgba(0, 212, 255, 0.8), 0 0 24px rgba(0, 212, 255, 0.3); }
+  50%       { box-shadow: 0 0 14px rgba(0, 212, 255, 0.75); }
 }
 
 @keyframes spin {
@@ -27,7 +27,7 @@
 }
 
 .bead-pulse {
-  animation: bead-pulse 2s ease-in-out infinite;
+  animation: cyber-pulse 1.6s ease-in-out infinite;
 }
 
 .spin {
