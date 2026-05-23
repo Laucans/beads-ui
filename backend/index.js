@@ -181,6 +181,92 @@ app.get('/api/wisps', async (_req, res) => {
   }
 })
 
+function parseDoctorOutput(stdout) {
+  const lines = stdout.split('\n')
+  const checks = []
+  let summary = { passed: 0, warnings: 0, failed: 0 }
+
+  for (const line of lines) {
+    // Main check line: "  ○  <id>...  ✓/⚠/✖  <message>"
+    const m = line.match(/^\s+○\s+(\S+?)\.\.\.\s+([✓⚠✖])\s+(.+)/)
+    if (m) {
+      const [, id, sym, raw] = m
+      const severity = sym === '✓' ? 'ok' : sym === '⚠' ? 'warning' : 'critical'
+      const message = raw.startsWith(id) ? raw.slice(id.length).trim() : raw.trim()
+      checks.push({ id, severity, message, detail: null })
+      continue
+    }
+    // Notice lines (no ✓/⚠/✖): "  ○  <id>...notice: <text>"
+    const notice = line.match(/^\s+○\s+(\S+?)\.\.\.notice:\s*(.+)/)
+    if (notice) {
+      checks.push({ id: notice[1], severity: 'info', message: notice[2].trim(), detail: null })
+      continue
+    }
+    // Summary: "✓ N passed  ⚠ N warnings  ✖ N failed"
+    const sum = line.match(/✓\s+(\d+) passed.*?⚠\s+(\d+) warning.*?✖\s+(\d+) failed/)
+    if (sum) {
+      summary = { passed: +sum[1], warnings: +sum[2], failed: +sum[3] }
+      continue
+    }
+    // Detail continuation lines: "        └─ <detail>"
+    const detail = line.match(/└[─-]\s+(.+)/)
+    if (detail && checks.length > 0) {
+      const last = checks[checks.length - 1]
+      last.detail = last.detail ? `${last.detail} ${detail[1].trim()}` : detail[1].trim()
+    }
+  }
+
+  return { checks, summary }
+}
+
+app.get('/api/doctor', async (_req, res) => {
+  try {
+    const { stdout, stderr } = await execFileAsync('gt', ['doctor'], { timeout: 60000 })
+    const combined = stdout + (stderr || '')
+    const { checks, summary } = parseDoctorOutput(combined)
+    res.json({ checks, summary, timestamp: new Date().toISOString() })
+  } catch (err) {
+    // gt doctor exits non-zero when issues found — still parse output
+    const combined = (err.stdout || '') + (err.stderr || '')
+    if (combined.length > 0) {
+      const { checks, summary } = parseDoctorOutput(combined)
+      res.json({ checks, summary, timestamp: new Date().toISOString() })
+    } else {
+      res.status(500).json({ error: err.message })
+    }
+  }
+})
+
+app.post('/api/doctor/fix', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Connection', 'keep-alive')
+  res.flushHeaders()
+
+  const child = spawn('gt', ['doctor', '--fix', '--no-start'], { shell: false })
+
+  const send = (type, text) => res.write(`data: ${JSON.stringify({ type, text })}\n\n`)
+
+  child.stdout.on('data', d => send('output', d.toString()))
+  child.stderr.on('data', d => send('output', d.toString()))
+  child.on('close', code => { send('done', String(code)); res.end() })
+  child.on('error', err => { send('error', err.message); res.end() })
+  req.on('close', () => child.kill())
+})
+
+app.post('/api/wisps/burn', (req, res) => {
+  const { pid } = req.body
+  if (!pid || typeof pid !== 'number') {
+    return res.status(400).json({ error: 'numeric pid required' })
+  }
+  try {
+    process.kill(pid, 'SIGKILL')
+    res.json({ ok: true, pid })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 app.get('/api/status', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import PropTypes from 'prop-types'
 import ReactFlow, {
   MiniMap,
   Controls,
@@ -11,6 +12,7 @@ import 'reactflow/dist/style.css'
 import TooltipHelp from './components/TooltipHelp'
 import MergeQueue from './components/MergeQueue'
 import LiveTerminal from './components/LiveTerminal'
+import DoctorTab from './components/DoctorTab'
 
 const initialNodes = [
   {
@@ -44,7 +46,7 @@ const initialNodes = [
   {
     id: '3',
     position: { x: 200, y: 220 },
-    data: { label: 'polecat/nux' },
+    data: { label: 'polecat/furiosa' },
     style: {
       background: '#0f0f1a',
       border: '1px solid #ff6b35',
@@ -65,9 +67,10 @@ const initialEdges = [
 const API_BASE = 'http://localhost:3001'
 
 const TABS = [
-  { id: 'graph', label: '① Graph' },
-  { id: 'mq', label: '② File d\'attente' },
-  { id: 'terminal', label: '③ Terminal Live' },
+  { id: 'map',      label: '① Map Room' },
+  { id: 'doctor',   label: '② Doctor'   },
+  { id: 'mq',       label: '③ File d\'attente' },
+  { id: 'terminal', label: '④ Terminal Live' },
 ]
 
 function useSSE(onBeadUpdate) {
@@ -78,14 +81,11 @@ function useSSE(onBeadUpdate) {
     function connect() {
       const es = new EventSource(`${API_BASE}/api/events`)
       esRef.current = es
-
       es.addEventListener('connected', () => setSseState('connected'))
-
       es.addEventListener('bead-update', (e) => {
         const payload = JSON.parse(e.data)
         onBeadUpdate(payload)
       })
-
       es.onerror = () => {
         setSseState('reconnecting')
         es.close()
@@ -93,20 +93,47 @@ function useSSE(onBeadUpdate) {
       }
     }
     connect()
-    return () => {
-      esRef.current?.close()
-    }
+    return () => { esRef.current?.close() }
   }, [onBeadUpdate])
 
   return sseState
 }
 
+function MapRoom({ nodes, edges, onNodesChange, onEdgesChange, onConnect }) {
+  return (
+    <ReactFlow
+      nodes={nodes}
+      edges={edges}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
+      onConnect={onConnect}
+      fitView
+      style={{ background: '#0a0a0f' }}
+    >
+      <Controls style={{ background: '#0f0f1a', border: '1px solid #1a1a2e' }} />
+      <MiniMap
+        style={{ background: '#0f0f1a', border: '1px solid #1a1a2e' }}
+        nodeColor={(n) => n.style?.border?.includes('00ff88') ? '#00ff88' : '#00d4ff'}
+      />
+      <Background color="#1a1a2e" gap={24} />
+    </ReactFlow>
+  )
+}
+
+MapRoom.propTypes = {
+  nodes: PropTypes.array.isRequired,
+  edges: PropTypes.array.isRequired,
+  onNodesChange: PropTypes.func.isRequired,
+  onEdgesChange: PropTypes.func.isRequired,
+  onConnect: PropTypes.func.isRequired,
+}
+
 function App() {
+  const [activeTab, setActiveTab] = useState('map')
   const [nodes, , onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
   const [status, setStatus] = useState('idle')
   const [lastBeadUpdate, setLastBeadUpdate] = useState(null)
-  const [activeTab, setActiveTab] = useState('graph')
 
   const handleBeadUpdate = useCallback((payload) => {
     setLastBeadUpdate(payload)
@@ -185,44 +212,34 @@ function App() {
       </header>
 
       {/* Tab bar */}
-      <nav className="flex border-b border-cyber-border bg-cyber-surface px-2">
-        {TABS.map((tab) => (
+      <nav className="flex border-b border-cyber-border bg-cyber-surface px-4">
+        {TABS.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`
-              px-4 py-2 text-xs font-mono border-b-2 transition-colors
-              ${activeTab === tab.id
+            className={[
+              'px-4 py-2 text-xs font-mono border-b-2 transition-colors',
+              activeTab === tab.id
                 ? 'border-cyber-accent text-cyber-accent'
-                : 'border-transparent text-cyber-dim hover:text-cyber-text'
-              }
-            `}
+                : 'border-transparent text-cyber-dim hover:text-cyber-text',
+            ].join(' ')}
           >
             {tab.label}
           </button>
         ))}
       </nav>
 
-      <main className="flex-1 relative overflow-hidden">
-        {activeTab === 'graph' && (
-          <ReactFlow
+      <main className="flex-1 overflow-hidden relative">
+        {activeTab === 'map' && (
+          <MapRoom
             nodes={nodes}
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
-            fitView
-            style={{ background: '#0a0a0f' }}
-          >
-            <Controls style={{ background: '#0f0f1a', border: '1px solid #1a1a2e' }} />
-            <MiniMap
-              style={{ background: '#0f0f1a', border: '1px solid #1a1a2e' }}
-              nodeColor={(n) => n.style?.border?.includes('00ff88') ? '#00ff88' : '#00d4ff'}
-            />
-            <Background color="#1a1a2e" gap={24} />
-          </ReactFlow>
+          />
         )}
-
+        {activeTab === 'doctor' && <DoctorTab />}
         {activeTab === 'mq' && <MergeQueue />}
         {activeTab === 'terminal' && <LiveTerminal />}
       </main>

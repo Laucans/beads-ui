@@ -17,6 +17,23 @@
   }
 }
 
+@keyframes bead-pulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(0, 212, 255, 0.3); }
+  50%       { box-shadow: 0 0 12px rgba(0, 212, 255, 0.8), 0 0 24px rgba(0, 212, 255, 0.3); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.bead-pulse {
+  animation: bead-pulse 2s ease-in-out infinite;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
 @layer components {
   .cyber-panel {
     @apply bg-cyber-surface border border-cyber-border rounded;
