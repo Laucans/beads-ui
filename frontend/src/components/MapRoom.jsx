@@ -11,6 +11,7 @@ import ReactFlow, {
   useEdgesState,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
+import TimeTravelSlider from './TimeTravelSlider'
 
 const API_BASE = 'http://localhost:3001'
 
@@ -298,6 +299,13 @@ export default function MapRoom({ lastBeadUpdate }) {
   const [loadingCommits, setLoadingCommits] = useState(false)
   const [error, setError] = useState(null)
 
+  // Time-travel state
+  const [timeTravelActive, setTimeTravelActive] = useState(false)
+  const [snapshotCommit, setSnapshotCommit] = useState(null)
+  const [snapshotBeads, setSnapshotBeads] = useState(null)
+  const [snapshotDeps, setSnapshotDeps] = useState(null)
+  const [snapshotLoading, setSnapshotLoading] = useState(false)
+
   const fetchAll = useCallback(async () => {
     try {
       setError(null)
@@ -306,7 +314,8 @@ export default function MapRoom({ lastBeadUpdate }) {
         fetch(`${API_BASE}/api/convoys`).then(r => r.json()),
         fetch(`${API_BASE}/api/deps`).then(r => r.json()),
       ])
-      setBeads(Array.isArray(b) ? b : [])
+      const beadData = b.beads ?? b
+      setBeads(Array.isArray(beadData) ? beadData : [])
       setConvoys(Array.isArray(c) ? c : [])
       setDeps(Array.isArray(d) ? d : [])
     } catch (err) {
@@ -316,8 +325,9 @@ export default function MapRoom({ lastBeadUpdate }) {
 
   useEffect(() => { fetchAll() }, [fetchAll])
 
-  // Apply SSE bead-status updates without re-fetching
+  // Apply SSE bead-status updates without re-fetching (skip during time-travel)
   useEffect(() => {
+    if (timeTravelActive) return
     if (!lastBeadUpdate?.changes?.length) return
     setBeads(prev => {
       const next = [...prev]
@@ -327,16 +337,36 @@ export default function MapRoom({ lastBeadUpdate }) {
       }
       return next
     })
-  }, [lastBeadUpdate])
+  }, [lastBeadUpdate, timeTravelActive])
+
+  // Fetch snapshot when commit selection changes
+  useEffect(() => {
+    if (!snapshotCommit) {
+      setSnapshotBeads(null)
+      setSnapshotDeps(null)
+      return
+    }
+    setSnapshotLoading(true)
+    fetch(`${API_BASE}/api/dolt/snapshot/${snapshotCommit.commit_hash}`)
+      .then(r => r.json())
+      .then(data => {
+        setSnapshotBeads(Array.isArray(data.beads) ? data.beads : [])
+        setSnapshotDeps(Array.isArray(data.deps) ? data.deps : [])
+        setSnapshotLoading(false)
+      })
+      .catch(() => setSnapshotLoading(false))
+  }, [snapshotCommit])
 
   // Rebuild graph whenever data changes
   useEffect(() => {
-    if (!beads.length && !convoys.length) return
-    const { rfNodes, rfEdges, orphans: o } = buildGraph(beads, convoys, deps)
+    const activeBeads = (snapshotCommit && snapshotBeads) ? snapshotBeads : beads
+    const activeDeps = (snapshotCommit && snapshotDeps) ? snapshotDeps : deps
+    if (!activeBeads.length && !convoys.length) return
+    const { rfNodes, rfEdges, orphans: o } = buildGraph(activeBeads, convoys, activeDeps)
     setNodes(rfNodes)
     setEdges(rfEdges)
     setOrphans(o)
-  }, [beads, convoys, deps, setNodes, setEdges])
+  }, [beads, convoys, deps, snapshotBeads, snapshotDeps, snapshotCommit, setNodes, setEdges])
 
   const onNodeClick = useCallback(async (_, node) => {
     if (node.type !== 'beadNode') return
@@ -356,83 +386,136 @@ export default function MapRoom({ lastBeadUpdate }) {
 
   const onPaneClick = useCallback(() => setSelectedBead(null), [])
 
+  const handleTimeTravelSelect = useCallback((commit) => {
+    setSnapshotCommit(commit)
+  }, [])
+
+  const handleTimeTravelClose = useCallback(() => {
+    setTimeTravelActive(false)
+    setSnapshotCommit(null)
+  }, [])
+
   return (
-    <div style={{ display: 'flex', width: '100%', height: '100%' }}>
-      {/* Left panel: orphans */}
-      <div style={{
-        width: 210, flexShrink: 0, borderRight: '1px solid #1a1a2e',
-        background: '#09090e', overflowY: 'auto', padding: '10px 8px',
-      }}>
-        <div style={{ fontSize: 9, fontFamily: 'monospace', color: '#2a2a3a', letterSpacing: '0.1em', marginBottom: 8 }}>
-          ORPHANS ({orphans.length})
-        </div>
-        {orphans.length === 0
-          ? <div style={{ fontSize: 10, color: '#252530', fontFamily: 'monospace' }}>none</div>
-          : orphans.map(b => {
-            const { color } = statusInfo(b.status)
-            return (
-              <div key={b.id} onClick={() => { setSelectedBead(b); setCommits([]) }}
-                style={{
-                  border: `1px solid ${color}44`, borderRadius: 4, padding: '6px 8px',
-                  marginBottom: 6, background: '#0f0f1a', cursor: 'pointer', fontFamily: 'monospace',
-                }}>
-                <div style={{ color, fontSize: 9 }}>{b.id}</div>
-                <div style={{ color: '#b0b0c0', fontSize: 10, marginTop: 2 }}>
-                  {b.title.length > 28 ? b.title.slice(0, 28) + '…' : b.title}
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%' }}>
+      {/* Main area */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        {/* Left panel: orphans */}
+        <div style={{
+          width: 210, flexShrink: 0, borderRight: '1px solid #1a1a2e',
+          background: '#09090e', overflowY: 'auto', padding: '10px 8px',
+        }}>
+          <div style={{ fontSize: 9, fontFamily: 'monospace', color: '#2a2a3a', letterSpacing: '0.1em', marginBottom: 8 }}>
+            ORPHANS ({orphans.length})
+          </div>
+          {orphans.length === 0
+            ? <div style={{ fontSize: 10, color: '#252530', fontFamily: 'monospace' }}>none</div>
+            : orphans.map(b => {
+              const { color } = statusInfo(b.status)
+              return (
+                <div key={b.id} onClick={() => { setSelectedBead(b); setCommits([]) }}
+                  style={{
+                    border: `1px solid ${color}44`, borderRadius: 4, padding: '6px 8px',
+                    marginBottom: 6, background: '#0f0f1a', cursor: 'pointer', fontFamily: 'monospace',
+                  }}>
+                  <div style={{ color, fontSize: 9 }}>{b.id}</div>
+                  <div style={{ color: '#b0b0c0', fontSize: 10, marginTop: 2 }}>
+                    {b.title.length > 28 ? b.title.slice(0, 28) + '…' : b.title}
+                  </div>
                 </div>
-              </div>
-            )
-          })
-        }
-        <div style={{ marginTop: 16, borderTop: '1px solid #1a1a2e', paddingTop: 10 }}>
-          <button onClick={fetchAll}
-            style={{
-              width: '100%', padding: '5px 0', background: 'none',
-              border: '1px solid #1a1a2e', borderRadius: 3, color: '#404050',
-              fontSize: 9, fontFamily: 'monospace', cursor: 'pointer', letterSpacing: '0.08em',
-            }}>
-            ↺ refresh
-          </button>
-          {error && <div style={{ color: '#ff6b35', fontSize: 9, marginTop: 6, wordBreak: 'break-word' }}>{error}</div>}
+              )
+            })
+          }
+          <div style={{ marginTop: 16, borderTop: '1px solid #1a1a2e', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <button onClick={fetchAll}
+              style={{
+                width: '100%', padding: '5px 0', background: 'none',
+                border: '1px solid #1a1a2e', borderRadius: 3, color: '#404050',
+                fontSize: 9, fontFamily: 'monospace', cursor: 'pointer', letterSpacing: '0.08em',
+              }}>
+              ↺ refresh
+            </button>
+            <button
+              onClick={() => setTimeTravelActive(v => !v)}
+              style={{
+                width: '100%', padding: '5px 0', background: 'none',
+                border: `1px solid ${timeTravelActive ? '#ff990066' : '#1a1a2e'}`, borderRadius: 3,
+                color: timeTravelActive ? '#ff9900' : '#404050',
+                fontSize: 9, fontFamily: 'monospace', cursor: 'pointer', letterSpacing: '0.08em',
+              }}>
+              ◷ time travel
+            </button>
+            {error && <div style={{ color: '#ff6b35', fontSize: 9, marginTop: 2, wordBreak: 'break-word' }}>{error}</div>}
+          </div>
         </div>
-      </div>
 
-      {/* Main canvas */}
-      <div style={{ flex: 1, position: 'relative' }}>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onNodeClick={onNodeClick}
-          onPaneClick={onPaneClick}
-          nodeTypes={nodeTypes}
-          fitView
-          fitViewOptions={{ padding: 0.15 }}
-          nodesConnectable={false}
-          style={{ background: '#0a0a0f' }}
-          proOptions={{ hideAttribution: true }}
-        >
-          <Controls style={{ background: '#0f0f1a', border: '1px solid #1a1a2e' }} />
-          <MiniMap
-            style={{ background: '#0f0f1a', border: '1px solid #1a1a2e' }}
-            nodeColor={n => {
-              if (n.type === 'convoyNode') return '#1a3a2e'
-              return statusInfo(n.data?.bead?.status).color
-            }}
-            maskColor="rgba(10,10,15,0.85)"
+        {/* Main canvas */}
+        <div style={{ flex: 1, position: 'relative' }}>
+          {/* Historical view banner */}
+          {snapshotCommit && (
+            <div style={{
+              position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)',
+              zIndex: 10, background: 'rgba(9,9,14,0.92)', border: '1px solid #ff990055',
+              borderRadius: 4, padding: '4px 12px', fontFamily: 'monospace',
+              display: 'flex', alignItems: 'center', gap: 8,
+              pointerEvents: 'none',
+            }}>
+              {snapshotLoading
+                ? <span style={{ color: '#ff9900', fontSize: 9 }}>◷ loading snapshot…</span>
+                : <>
+                  <span style={{ color: '#ff9900', fontSize: 9, letterSpacing: '0.08em' }}>HISTORICAL VIEW</span>
+                  <span style={{ color: '#ff990066', fontSize: 9 }}>
+                    {snapshotCommit.date?.slice(0, 16)}
+                  </span>
+                  <span style={{ color: '#505060', fontSize: 9 }}>
+                    {snapshotCommit.message?.slice(0, 48)}{(snapshotCommit.message?.length ?? 0) > 48 ? '…' : ''}
+                  </span>
+                </>
+              }
+            </div>
+          )}
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onNodeClick={onNodeClick}
+            onPaneClick={onPaneClick}
+            nodeTypes={nodeTypes}
+            fitView
+            fitViewOptions={{ padding: 0.15 }}
+            nodesConnectable={false}
+            style={{ background: '#0a0a0f' }}
+            proOptions={{ hideAttribution: true }}
+          >
+            <Controls style={{ background: '#0f0f1a', border: '1px solid #1a1a2e' }} />
+            <MiniMap
+              style={{ background: '#0f0f1a', border: '1px solid #1a1a2e' }}
+              nodeColor={n => {
+                if (n.type === 'convoyNode') return '#1a3a2e'
+                return statusInfo(n.data?.bead?.status).color
+              }}
+              maskColor="rgba(10,10,15,0.85)"
+            />
+            <Background color="#12121e" gap={24} />
+          </ReactFlow>
+        </div>
+
+        {/* Right panel: inspector */}
+        {selectedBead && (
+          <Inspector
+            bead={selectedBead}
+            commits={commits}
+            loading={loadingCommits}
+            onClose={() => setSelectedBead(null)}
           />
-          <Background color="#12121e" gap={24} />
-        </ReactFlow>
+        )}
       </div>
 
-      {/* Right panel: inspector */}
-      {selectedBead && (
-        <Inspector
-          bead={selectedBead}
-          commits={commits}
-          loading={loadingCommits}
-          onClose={() => setSelectedBead(null)}
+      {/* Time-travel slider */}
+      {timeTravelActive && (
+        <TimeTravelSlider
+          onSelect={handleTimeTravelSelect}
+          onClose={handleTimeTravelClose}
         />
       )}
     </div>

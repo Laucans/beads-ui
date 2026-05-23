@@ -265,6 +265,50 @@ app.post('/api/wisps/burn', (req, res) => {
   }
 })
 
+app.get('/api/dolt/history', async (_req, res) => {
+  try {
+    const rows = await doltQuery(
+      'beads_ui',
+      'SELECT commit_hash, message, date FROM dolt_log ORDER BY date DESC LIMIT 200'
+    )
+    res.json(rows)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.get('/api/dolt/snapshot/:hash', async (req, res) => {
+  const { hash } = req.params
+  if (!/^[0-9a-z]{20,40}$/.test(hash)) {
+    return res.status(400).json({ error: 'invalid hash' })
+  }
+  try {
+    const [rawBeads, rawDeps, convoyDeps] = await Promise.all([
+      doltQuery('beads_ui', `SELECT id, title, description, status, assignee FROM issues AS OF '${hash}' WHERE issue_type NOT IN ('molecule', 'rig') ORDER BY created_at DESC`),
+      doltQuery('beads_ui', `SELECT issue_id, depends_on_id FROM dependencies AS OF '${hash}' WHERE type = 'blocks'`),
+      doltQuery('hq', "SELECT issue_id, depends_on_id FROM dependencies WHERE type = 'tracks'"),
+    ])
+    const beadIdSet = new Set(rawBeads.map(b => b.id))
+    const convoyMap = {}
+    for (const dep of convoyDeps) {
+      const beadId = dep.depends_on_id.replace(/^external:[^:]+:/, '')
+      if (!convoyMap[beadId]) convoyMap[beadId] = dep.issue_id
+    }
+    const beads = rawBeads.map(b => ({
+      id: b.id,
+      title: b.title,
+      description: b.description,
+      status: b.status,
+      polecat_id: b.assignee || null,
+      convoy_id: convoyMap[b.id] || null,
+    }))
+    const deps = rawDeps.filter(d => beadIdSet.has(d.issue_id) && beadIdSet.has(d.depends_on_id))
+    res.json({ beads, deps })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 app.get('/api/deps', async (_req, res) => {
   try {
     const deps = await doltQuery(

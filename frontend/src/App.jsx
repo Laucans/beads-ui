@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import PropTypes from 'prop-types'
 import TooltipHelp from './components/TooltipHelp'
 import MapRoom from './components/MapRoom'
 import MergeQueue from './components/MergeQueue'
@@ -128,4 +127,3 @@ export default function App() {
   )
 }
 
-App.propTypes = {}
