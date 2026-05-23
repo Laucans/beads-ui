@@ -4,6 +4,7 @@ import MapRoom from './components/MapRoom'
 import MergeQueue from './components/MergeQueue'
 import LiveTerminal from './components/LiveTerminal'
 import DoctorTab from './components/DoctorTab'
+import ConvoyStudio from './components/ConvoyStudio'
 
 const API_BASE = 'http://localhost:3001'
 
@@ -12,6 +13,7 @@ const TABS = [
   { id: 'doctor',   label: '⚕ Doctor'          },
   { id: 'mq',       label: '▦ File d\'attente' },
   { id: 'terminal', label: '⚡ Terminal Live'   },
+  { id: 'studio',   label: '✦ Convoy Studio'   },
 ]
 
 function useSSE(onBeadUpdate) {
@@ -117,6 +119,7 @@ export default function App() {
         {activeTab === 'doctor'   && <DoctorTab />}
         {activeTab === 'mq'       && <MergeQueue />}
         {activeTab === 'terminal' && <LiveTerminal />}
+        {activeTab === 'studio'   && <ConvoyStudio />}
       </main>
 
       <footer className="px-4 py-1 border-t border-cyber-border bg-cyber-surface text-cyber-dim text-xs font-mono flex items-center gap-1">

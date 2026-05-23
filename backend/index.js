@@ -444,6 +444,62 @@ app.get('/api/logs/stream', (req, res) => {
   req.on('close', () => logSseClients.delete(res))
 })
 
+// ── Convoy Studio: create convoy from visual editor ───────────────────────
+app.post('/api/convoy/sling', async (req, res) => {
+  const { name, beads, edges } = req.body
+  if (!name?.trim()) return res.status(400).json({ error: 'Convoy name is required' })
+  if (!Array.isArray(beads) || beads.length === 0) {
+    return res.status(400).json({ error: 'At least one bead is required' })
+  }
+
+  const idMap = {} // localId -> real bead id
+  const allCreated = []
+
+  try {
+    // 1. Create each bead
+    for (const bead of beads) {
+      const title = (bead.title || 'Untitled bead').trim()
+      const { stdout } = await execFileAsync('bd', ['create', title, '--silent', '--type', 'task'], {
+        cwd: REPO_ROOT,
+        env: { ...process.env },
+      })
+      const realId = stdout.trim()
+      idMap[bead.id] = realId
+      allCreated.push(realId)
+    }
+
+    // 2. Set dependencies: edge source→target means target depends on source (source blocks target)
+    for (const edge of (edges || [])) {
+      const realSource = idMap[edge.source]
+      const realTarget = idMap[edge.target]
+      if (realSource && realTarget) {
+        await execFileAsync('bd', ['link', realTarget, realSource], {
+          cwd: REPO_ROOT,
+          env: { ...process.env },
+        })
+      }
+    }
+
+    // 3. Create convoy grouping all beads
+    const { stdout: convoyOut } = await execFileAsync('gt', [
+      'convoy', 'create', name.trim(), ...allCreated
+    ], {
+      cwd: REPO_ROOT,
+      env: { ...process.env },
+    })
+
+    res.json({
+      ok: true,
+      beadIds: idMap,
+      convoyOutput: convoyOut.trim(),
+    })
+  } catch (err) {
+    const stderr = err.stderr || err.message || String(err)
+    console.error('[convoy/sling] error:', stderr)
+    res.status(500).json({ error: stderr })
+  }
+})
+
 app.listen(PORT, () => {
   console.log(`Backend running on http://localhost:${PORT}`)
 })
