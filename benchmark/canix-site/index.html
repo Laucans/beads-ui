@@ -9,30 +9,142 @@
 </head>
 <body>
     <header class="header">
-        <nav class="nav">
+        <nav class="nav sticky">
             <div class="nav__logo">Groupe Canix Inc.</div>
             <ul class="nav__menu">
-                <li class="nav__item"><a href="#" class="nav__link">Accueil</a></li>
-                <li class="nav__item"><a href="#" class="nav__link">À propos</a></li>
-                <li class="nav__item"><a href="#" class="nav__link">Services</a></li>
-                <li class="nav__item"><a href="#" class="nav__link">Contact</a></li>
+                <li class="nav__item"><a href="#accueil" class="nav__link">Accueil</a></li>
+                <li class="nav__item"><a href="#apropos" class="nav__link">À propos</a></li>
+                <li class="nav__item"><a href="#services" class="nav__link">Services</a></li>
+                <li class="nav__item"><a href="#contact" class="nav__link">Contact</a></li>
             </ul>
         </nav>
     </header>
 
     <main class="main">
-        <section class="hero">
-            <h1 class="hero__title">Innovation et performance</h1>
-            <p class="hero__subtitle">Groupe Canix Inc. — Votre partenaire de confiance pour des solutions d'excellence.</p>
-            <div class="hero__actions">
-                <a href="#" class="btn btn--primary">Commencer</a>
-                <a href="#" class="btn btn--secondary">En savoir plus</a>
+        <section id="accueil" class="hero">
+            <div class="hero__container">
+                <h1 class="hero__title">Solutions numériques pour propulser votre entreprise</h1>
+                <p class="hero__subtitle">Groupe Canix Inc. — Votre partenaire de confiance pour des solutions d'excellence.</p>
+                <div class="hero__actions">
+                    <a href="#services" class="btn btn--primary">Découvrir nos services</a>
+                </div>
+            </div>
+        </section>
+
+        <section id="nos-forces" class="section-force">
+            <div class="container">
+                <h2 class="section-title">Nos forces</h2>
+                <div class="force-grid">
+                    <article class="force-card">
+                        <h3 class="force-card__title">Expertise technique</h3>
+                        <p class="force-card__description">Une équipe expérimentée maîtrisant les dernières technologies du web.</p>
+                    </article>
+                    <article class="force-card">
+                        <h3 class="force-card__title">Conseil stratégique</h3>
+                        <p class="force-card__description">Des solutions sur mesure alignées avec vos objectiers commerciaux.</p>
+                    </article>
+                    <article class="force-card">
+                        <h3 class="force-card__title">Accompagnement sur mesure</h3>
+                        <p class="force-card__description">Un suivi personalized à chaque étape de votre projet digital.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="chiffres" class="section-chiffres">
+            <div class="container">
+                <div class="chiffres-grid">
+                    <div class="chiffre">
+                        <span class="chiffre__value">15</span>
+                        <span class="chiffre__label">années d'expérience</span>
+                    </div>
+                    <div class="chiffre">
+                        <span class="chiffre__value">200+</span>
+                        <span class="chiffre__label">clients</span>
+                    </div>
+                    <div class="chiffre">
+                        <span class="chiffre__value">98%</span>
+                        <span class="chiffre__label">satisfaction</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="services" class="section-services">
+            <div class="container">
+                <h2 class="section-title">Nos services</h2>
+                <div class="services-grid">
+                    <article class="service-card">
+                        <h3 class="service-card__title">Développement web</h3>
+                        <p class="service-card__description">Sites vitrines, e-commerce, applications web sur mesure.</p>
+                    </article>
+                    <article class="service-card">
+                        <h3 class="service-card__title">Design UI/UX</h3>
+                        <p class="service-card__description">Expériences utilisateur intuitives et esthétiques.</p>
+                    </article>
+                    <article class="service-card">
+                        <h3 class="service-card__title">Marketing digital</h3>
+                        <p class="service-card__description">Stratégies de production et acquisition clients.</p>
+                    </article>
+                    <article class="service-card">
+                        <h3 class="service-card__title">Maintenance</h3>
+                        <p class="service-card__description">Support technique et mises à jour continues.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="apropos" class="section-apropos">
+            <div class="container">
+                <h2 class="section-title">À propos</h2>
+                <p class="apropos__text">Créé en 2011, Groupe Canix Inc. s'est rapidement imposé comme un acteur incontournable du digital québécois. Notre mission : transformer vos défis technologiques en opportunités de croissance.</p>
+                <p class="apropos__text">Nous croyons que la technologie doit servir les ambition humaines, pas l'inverse. C'est pourquoi nous binons la rigueur technique à une approche centrée sur vos besoins.</p>
+            </div>
+        </section>
+
+        <section id="contact" class="section-contact">
+            <div class="container">
+                <h2 class="section-title">Contact</h2>
+                <form class="contact-form" action="#" method="POST">
+                    <div class="form-group">
+                        <label for="nom">Nom</label>
+                        <input type="text" id="nom" name="nom" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="courriel">Courriel</label>
+                        <input type="email" id="courriel" name="courriel" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="message">Message</label>
+                        <textarea id="message" name="message" rows="5" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn--primary">Envoyer</button>
+                </form>
             </div>
         </section>
     </main>
 
     <footer class="footer">
         <div class="footer__content">
+            <div class="footer__brand">
+                <div class="footer__logo">Groupe Canix Inc.</div>
+                <p class="footer__tagline">Solutions numériques pour propulser votre entreprise</p>
+            </div>
+            <div class="footer__links">
+                <div class="footer__column">
+                    <h4 class="footer__column-title">Navigation</h4>
+                    <ul class="footer__menu">
+                        <li><a href="#accueil">Accueil</a></li>
+                        <li><a href="#apropos">À propos</a></li>
+                        <li><a href="#services">Services</a></li>
+                    </ul>
+                </div>
+                <div class="footer__column">
+                    <h4 class="footer__column-title">Contact</h4>
+                    <p class="footer__contact">123 Avenue des Cabots<br>Québec, QC G1K 1A1</p>
+                    <p class="footer__contact">info@groupe-canix.com<br>+1 (418) 123-4567</p>
+                </div>
+            </div>
             <p class="footer__copyright">&copy; 2026 Groupe Canix Inc. Tous droits réservés.</p>
         </div>
     </footer>
