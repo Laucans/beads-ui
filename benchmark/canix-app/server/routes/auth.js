@@ -103,7 +103,7 @@ async function refresh(req, res) {
   res.json({ accessToken: newAccessToken });
 }
 
-async function protected(ctx, next) {
+async function protectedRoute(ctx, next) {
   const authHeader = ctx.headers['authorization'];
   if (!authHeader) {
     ctx.status = 401;
@@ -152,6 +152,6 @@ module.exports = {
   login,
   register,
   refresh,
-  protected,
+  protectedRoute,
   authorize
 };
