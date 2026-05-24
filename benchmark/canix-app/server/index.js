@@ -15,6 +15,9 @@ app.get('/api/health', (req, res) => {
 const crmRoutes = require('./routes/crm');
 app.use(crmRoutes);
 
+const quotesRoutes = require('./routes/quotes');
+app.use(quotesRoutes);
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {

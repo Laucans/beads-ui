@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quotes Awaiting Approval</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { margin: 0 0 20px; color: #333; }
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #e0e0e0; }
+    th { background: #1a1a2e; color: white; font-weight: 600; }
+    tr:hover { background: #f8f9fa; }
+    .badge { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; text-transform: uppercase; }
+    .badge-sent { background: #fff3e0; color: #f57c00; }
+    .btn { padding: 6px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; }
+    .btn-approve { background: #4caf50; color: white; }
+    .btn-approve:hover { background: #43a047; }
+    .btn-reject { background: #f44336; color: white; }
+    .btn-reject:hover { background: #e53935; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .actions { display: flex; gap: 8px; }
+    .empty { text-align: center; padding: 40px; color: #666; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Quotes Awaiting Approval</h1>
+    <div id="quotes-container">
+      <table id="quotes-table">
+        <thead>
+          <tr>
+            <th>Quote #</th>
+            <th>Customer</th>
+            <th>Amount</th>
+            <th>Created</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="quotes-body">
+        </tbody>
+      </table>
+      <div id="empty-state" class="empty" style="display: none;">No quotes awaiting approval</div>
+    </div>
+  </div>
+  <script>
+    async function loadQuotes() {
+      try {
+        const response = await fetch('/api/quotes', { credentials: 'include' });
+        const quotes = await response.json();
+        const tbody = document.getElementById('quotes-body');
+        const emptyState = document.getElementById('empty-state');
+        
+        const sentQuotes = quotes.filter(q => q.status === 'sent');
+        
+        if (!sentQuotes.length) {
+          tbody.innerHTML = '';
+          emptyState.style.display = 'block';
+          return;
+        }
+        
+        emptyState.style.display = 'none';
+        tbody.innerHTML = sentQuotes.map(q => `
+          <tr>
+            <td>${q.id}</td>
+            <td>${q.customerName || 'N/A'}</td>
+            <td>$${parseFloat(q.total || 0).toFixed(2)}</td>
+            <td>${new Date(q.createdAt || q.created_at).toLocaleDateString()}</td>
+            <td class="actions">
+              <button class="btn btn-approve" onclick="approveQuote(${q.id})">Approve</button>
+              <button class="btn btn-reject" onclick="rejectQuote(${q.id})">Reject</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (error) {
+        console.error('Error loading quotes:', error);
+        document.getElementById('quotes-body').innerHTML = '<tr><td colspan="5" style="color: #d32f2f;">Error loading quotes</td></tr>';
+      }
+    }
+    
+    async function approveQuote(id) {
+      try {
+        const response = await fetch(`/api/quotes/${id}/approve`, { 
+          method: 'POST',
+          credentials: 'include'
+        });
+        if (response.ok) {
+          loadQuotes();
+        } else {
+          alert('Failed to approve quote');
+        }
+      } catch (error) {
+        console.error('Error approving quote:', error);
+        alert('Error approving quote');
+      }
+    }
+    
+    async function rejectQuote(id) {
+      try {
+        const response = await fetch(`/api/quotes/${id}/reject`, { 
+          method: 'POST',
+          credentials: 'include'
+        });
+        if (response.ok) {
+          loadQuotes();
+        } else {
+          alert('Failed to reject quote');
+        }
+      } catch (error) {
+        console.error('Error rejecting quote:', error);
+        alert('Error rejecting quote');
+      }
+    }
+    
+    loadQuotes();
+  </script>
+</body>
+</html>
