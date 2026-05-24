@@ -1,17 +1,116 @@
-<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Client — Canix</title>
-<style>body{font-family:sans-serif;margin:0}header{background:#7c3aed;color:white;padding:1rem 2rem;display:flex;justify-content:space-between;align-items:center}main{padding:2rem}.card{background:white;padding:1.5rem;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.1);margin-bottom:1rem}button{background:#ef4444;color:white;border:none;padding:.5rem 1rem;border-radius:4px;cursor:pointer}</style>
-</head><body>
-<header><span>Canix — <span id="uname"></span> [Client]</span><button onclick="logout()">Déconnexion</button></header>
-<main><h2>Mon espace client</h2>
-<div class="card"><h3>Mes tickets</h3><p>1 ticket en cours de traitement.</p></div>
-<div class="card"><h3>Mes devis</h3><p>Dernier devis: en attente.</p></div>
-</main>
-<script>
-const token=localStorage.getItem('token');
-if(!token)window.location.href='login.html';
-fetch('/auth/me',{headers:{Authorization:'Bearer '+token}}).then(r=>r.json()).then(d=>{
-  if(!d.user||d.user.role!=='client'){localStorage.clear();window.location.href='login.html';return;}
-  document.getElementById('uname').textContent=d.user.email;
-}).catch(()=>{localStorage.clear();window.location.href='login.html';});
-function logout(){localStorage.clear();window.location.href='login.html';}
-</script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Client Dashboard - Canix App</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f7fa;
+    }
+    .navbar {
+      background: #2c3e50;
+      color: white;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .navbar h1 { margin: 0; font-size: 1.5rem; }
+    .navbar button {
+      background: #e74c3c;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .navbar button:hover { background: #c0392b; }
+    .container {
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .card h2 { margin-top: 0; color: #2c3e50; }
+    .user-info { color: #7f8c8d; }
+    .btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 0.5rem;
+    }
+    .btn-primary { background: #3498db; color: white; }
+    .btn-primary:hover { background: #2980b9; }
+    .btn-outline { border: 1px solid #ddd; background: white; color: #34495e; }
+    .btn-outline:hover { border-color: #3498db; color: #3498db; }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <h1>Client Dashboard</h1>
+    <button id="logoutBtn">Logout</button>
+  </nav>
+
+  <div class="container">
+    <div class="card">
+      <h2>Welcome, Client!</h2>
+      <p class="user-info" id="userInfo"></p>
+      <p>This dashboard allows you to view your quotes, submit tickets, and manage your company profile.</p>
+    </div>
+
+    <div class="card">
+      <h2>Your Quotes</h2>
+      <p>No quotes available at the moment.</p>
+    </div>
+
+    <div class="card">
+      <h2>Submit a Ticket</h2>
+      <p>Need assistance? Submit a support ticket and track its status here.</p>
+      <button class="btn btn-primary">Create Ticket</button>
+      <button class="btn btn-outline">View Tickets</button>
+    </div>
+  </div>
+
+  <script>
+    function checkAuth() {
+      const token = localStorage.getItem('jwt');
+      const userStr = localStorage.getItem('user');
+      
+      if (!token) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      const user = JSON.parse(userStr);
+      if (user.role !== 'client') {
+        window.location.href = `/${user.role}-dashboard.html`;
+        return;
+      }
+
+      document.getElementById('userInfo').textContent = 
+        `Logged in as: ${user.email} (${user.role})`;
+    }
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem('jwt');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      window.location.href = '/login.html';
+    });
+
+    checkAuth();
+  </script>
+</body>
+</html>
