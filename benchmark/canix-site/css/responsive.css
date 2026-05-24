@@ -1,0 +1,144 @@
+/* Responsive Design - Mobile First */
+/* Breakpoints: 768px (tablet), 1024px (desktop) */
+
+/* Mobile (default) */
+@media (max-width: 767px) {
+    .container {
+        padding: 0 16px;
+    }
+
+    .hero__container {
+        text-align: center;
+    }
+
+    .hero__title {
+        font-size: 1.5rem;
+    }
+
+    .hero__subtitle {
+        font-size: 1rem;
+    }
+
+    .nav__menu {
+        display: none;
+    }
+
+    .nav__toggle {
+        display: block;
+    }
+
+    .force-grid,
+    .chiffres-grid,
+    .services-grid,
+    .mission-grid,
+    .team-grid,
+    .timeline {
+        grid-template-columns: 1fr;
+    }
+
+    .footer__links {
+        flex-direction: column;
+    }
+
+    .footer__column {
+        margin-bottom: 16px;
+    }
+
+    .contact-form {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .contact-form .form-group {
+        width: 100%;
+    }
+}
+
+/* Tablet */
+@media (min-width: 768px) and (max-width: 1023px) {
+    .container {
+        max-width: 720px;
+        padding: 0 24px;
+    }
+
+    .hero__title {
+        font-size: 2rem;
+    }
+
+    .hero__subtitle {
+        font-size: 1.125rem;
+    }
+
+    .nav__menu {
+        display: flex;
+        gap: 24px;
+    }
+
+    .force-grid,
+    .chiffres-grid,
+    .services-grid,
+    .mission-grid,
+    .team-grid,
+    .timeline {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 24px;
+    }
+
+    .footer__links {
+        display: flex;
+    }
+
+    .footer__column {
+        margin: 0 24px;
+    }
+
+    .contact-form {
+        max-width: 540px;
+        margin: 0 auto;
+    }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+    .container {
+        max-width: 960px;
+        padding: 0 40px;
+    }
+
+    .hero__title {
+        font-size: 2.5rem;
+    }
+
+    .hero__subtitle {
+        font-size: 1.25rem;
+    }
+
+    .nav__menu {
+        display: flex;
+        gap: 24px;
+    }
+
+    .force-grid,
+    .chiffres-grid,
+    .services-grid,
+    .mission-grid,
+    .team-grid,
+    .timeline {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 32px;
+    }
+
+    .footer__links {
+        display: flex;
+        gap: 48px;
+    }
+
+    .footer__column {
+        min-width: 180px;
+    }
+
+    .contact-form {
+        max-width: 640px;
+        margin: 0 auto;
+    }
+}

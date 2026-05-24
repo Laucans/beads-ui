@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Groupe Canix Inc. | Contact</title>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/typography.css">
+    <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+    <header class="header">
+        <nav class="nav sticky">
+            <div class="nav__logo">Groupe Canix Inc.</div>
+            <ul class="nav__menu">
+                <li class="nav__item"><a href="index.html" class="nav__link">Accueil</a></li>
+                <li class="nav__item"><a href="about.html" class="nav__link">À propos</a></li>
+                <li class="nav__item"><a href="services.html" class="nav__link">Services</a></li>
+                <li class="nav__item"><a href="#contact" class="nav__link">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="main">
+        <section class="hero">
+            <div class="hero__container">
+                <h1 class="hero__title">Contactez-nous</h1>
+                <p class="hero__subtitle">Nous sommes à votre disposition pour répondre à vos questions</p>
+                <div class="hero__actions">
+                    <a href="#formulaire" class="btn btn--primary">Envoyez-nous un message</a>
+                </div>
+            </div>
+        </section>
+
+        <section id="breadcrumb" class="section-breadcrumb">
+            <div class="container">
+                <nav class="breadcrumb">
+                    <a href="index.html">Accueil</a>
+                    <span>›</span>
+                    <span>Contact</span>
+                </nav>
+            </div>
+        </section>
+
+        <section id="coordonnees" class="section-coordonnees">
+            <div class="container">
+                <h2 class="section-title">Coordonnées</h2>
+                <div class="coordonnees-grid">
+                    <article class="coordonnees-item">
+                        <h3 class="coordonnees-item__title">Adresse</h3>
+                        <p class="coordonnees-item__desc">1000 rue De La Gauchetière O<br>Montréal QC H3B 4W5</p>
+                    </article>
+                    <article class="coordonnees-item">
+                        <h3 class="coordonnees-item__title">Téléphone</h3>
+                        <p class="coordonnees-item__desc">+1 514-555-0199</p>
+                    </article>
+                    <article class="coordonnees-item">
+                        <h3 class="coordonnees-item__title">Courriel</h3>
+                        <p class="coordonnees-item__desc">info@groupecanix.ca</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="formulaire" class="section-formulaire">
+            <div class="container">
+                <h2 class="section-title">formulaire</h2>
+                <form class="contact-form" action="#" method="POST">
+                    <div class="form-group">
+                        <label for="nom">Nom</label>
+                        <input type="text" id="nom" name="nom" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="telephone">Téléphone</label>
+                        <input type="tel" id="telephone" name="telephone" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="entreprise">Entreprise</label>
+                        <input type="text" id="entreprise" name="entreprise" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="message">Message</label>
+                        <textarea id="message" name="message" rows="5" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn--primary">Envoyer</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="footer__content">
+            <div class="footer__brand">
+                <div class="footer__logo">Groupe Canix Inc.</div>
+                <p class="footer__tagline">Solutions numériques pour propulser votre entreprise</p>
+            </div>
+            <div class="footer__links">
+                <div class="footer__column">
+                    <h4 class="footer__column-title">Navigation</h4>
+                    <ul class="footer__menu">
+                        <li><a href="index.html">Accueil</a></li>
+                        <li><a href="about.html">À propos</a></li>
+                        <li><a href="services.html">Services</a></li>
+                        <li><a href="contact.html">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer__column">
+                    <h4 class="footer__column-title">Contact</h4>
+                    <p class="footer__contact">1000 rue De La Gauchetière O<br>Montréal QC H3B 4W5</p>
+                    <p class="footer__contact">info@groupecanix.ca<br>+1 514-555-0199</p>
+                </div>
+            </div>
+            <p class="footer__copyright">&copy; 2024 Groupe Canix Inc.</p>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
