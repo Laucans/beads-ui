@@ -1,0 +1,17 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Client — Canix</title>
+<style>body{font-family:sans-serif;margin:0}header{background:#7c3aed;color:white;padding:1rem 2rem;display:flex;justify-content:space-between;align-items:center}main{padding:2rem}.card{background:white;padding:1.5rem;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.1);margin-bottom:1rem}button{background:#ef4444;color:white;border:none;padding:.5rem 1rem;border-radius:4px;cursor:pointer}</style>
+</head><body>
+<header><span>Canix — <span id="uname"></span> [Client]</span><button onclick="logout()">Déconnexion</button></header>
+<main><h2>Mon espace client</h2>
+<div class="card"><h3>Mes tickets</h3><p>1 ticket en cours de traitement.</p></div>
+<div class="card"><h3>Mes devis</h3><p>Dernier devis: en attente.</p></div>
+</main>
+<script>
+const token=localStorage.getItem('token');
+if(!token)window.location.href='login.html';
+fetch('/auth/me',{headers:{Authorization:'Bearer '+token}}).then(r=>r.json()).then(d=>{
+  if(!d.user||d.user.role!=='client'){localStorage.clear();window.location.href='login.html';return;}
+  document.getElementById('uname').textContent=d.user.email;
+}).catch(()=>{localStorage.clear();window.location.href='login.html';});
+function logout(){localStorage.clear();window.location.href='login.html';}
+</script></body></html>
