@@ -6,12 +6,7 @@ use axum::{
 };
 use crate::auth::jwt::{Claims, validate_token};
 use crate::errors::AppError;
-
-#[derive(Clone)]
-pub struct AppState {
-    pub jwt_secret: String,
-    pub pool: sqlx::SqlitePool,
-}
+use crate::AppState;
 
 pub async fn auth_middleware(
     State(state): State<AppState>,
