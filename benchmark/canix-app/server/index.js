@@ -18,6 +18,9 @@ app.use(crmRoutes);
 const quotesRoutes = require('./routes/quotes');
 app.use(quotesRoutes);
 
+const ticketsRoutes = require('./routes/tickets');
+app.use(ticketsRoutes);
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {

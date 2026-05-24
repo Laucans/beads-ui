@@ -12,6 +12,7 @@ When you reach **24,000 tokens**, you MUST:
    git -C /Users/laurentcanis/gastown/beads_ui/crew/local_qwen commit -m "feat: <bead description>"
    git -C /Users/laurentcanis/gastown/beads_ui/crew/local_qwen push
    BEADS_DIR=/Users/laurentcanis/gastown/beads_ui/.beads bd close <bead-id>
+   gt nudge mayor "<bead-id> complete, ready for next"
    ```
 3. Stop working after the commit — do not start new tasks
 
