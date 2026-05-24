@@ -24,11 +24,11 @@ pub fn validate_token(token: &str, secret: &str) -> Result<Claims> {
     let decoding_key = DecodingKey::from_secret(secret.as_bytes());
     let validation = Validation::new(Algorithm::HS256);
     let decoded = decode::<Claims>(token, &decoding_key, &validation).map_err(|e| {
-        anyhow::anyhow!(match e {
-            jsonwebtoken::errors::Error::InvalidToken => "Invalid token",
-            jsonwebtoken::errors::Error::InvalidSignature => "Invalid signature",
-            jsonwebtoken::errors::Error::MissingClaim(_) => "Missing claim",
-            _ => e.to_string().as_str(),
+        anyhow::anyhow!(match e.kind() {
+            jsonwebtoken::errors::ErrorKind::InvalidToken => "Invalid token",
+            jsonwebtoken::errors::ErrorKind::InvalidSignature => "Invalid signature",
+            jsonwebtoken::errors::ErrorKind::MissingRequiredClaim(_) => "Missing claim",
+            _ => "token error",
         })
     })?;
     Ok(decoded.claims)
