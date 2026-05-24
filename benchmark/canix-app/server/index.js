@@ -21,6 +21,9 @@ app.use(quotesRoutes);
 const ticketsRoutes = require('./routes/tickets');
 app.use(ticketsRoutes);
 
+const analyticsRoutes = require('./routes/analytics');
+app.use(analyticsRoutes);
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {

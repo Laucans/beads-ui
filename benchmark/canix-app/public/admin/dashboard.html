@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Analytics</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 20px; background: #f5f5f5; }
+    .container { max-width: 1600px; margin: 0 auto; }
+    .header { margin-bottom: 30px; }
+    h1 { color: #333; margin-bottom: 10px; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
+    .kpi-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .kpi-value { font-size: 32px; font-weight: 700; color: #007bff; }
+    .kpi-label { color: #666; font-size: 14px; margin-top: 5px; }
+    .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 30px; }
+    .chart-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .chart-title { font-size: 18px; font-weight: 600; margin-bottom: 15px; color: #333; }
+    .table-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background: #f8f9fa; font-weight: 600; color: #333; }
+    .chart-container { position: relative; height: 300px; }
+    .chart-donut { height: 350px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Analytics Dashboard</h1>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-value" id="clientsCount">0</div>
+        <div class="kpi-label">Total Clients</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" id="quotesCount">0</div>
+        <div class="kpi-label">Total Quotes</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" id="quotesApproved">0</div>
+        <div class="kpi-label">Quotes Approved</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" id="resolvedTickets">0</div>
+        <div class="kpi-label">Tickets Resolved</div>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Quotes per Month (Last 12 Months)</div>
+        <div class="chart-container">
+          <canvas id="quotesChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Clients by Sector</div>
+        <div class="chart-container chart-donut">
+          <canvas id="sectorChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Tickets by Priority</div>
+        <div class="chart-container">
+          <canvas id="priorityChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <h2>Top 5 Clients by Quote Count</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Client Name</th>
+            <th>Quotes</th>
+          </tr>
+        </thead>
+        <tbody id="topClientsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:3000/api';
+
+    async function loadDashboard() {
+      await Promise.all([
+        loadSummary(),
+        loadQuotesMonthly(),
+        loadClientsBySector(),
+        loadTicketsByPriority(),
+        loadTopClients()
+      ]);
+    }
+
+    async function loadSummary() {
+      try {
+        const response = await fetch(`${API_BASE}/analytics/summary`, {
+          credentials: 'include'
+        });
+        const data = await response.json();
+        
+        document.getElementById('clientsCount').textContent = data.clients;
+        document.getElementById('quotesCount').textContent = data.quotes;
+        document.getElementById('quotesApproved').textContent = data.quotesApproved;
+        document.getElementById('resolvedTickets').textContent = data.tickets.resolved;
+      } catch (error) {
+        console.error('Error loading summary:', error);
+      }
+    }
+
+    async function loadQuotesMonthly() {
+      try {
+        const response = await fetch(`${API_BASE}/analytics/quotes-monthly`, {
+          credentials: 'include'
+        });
+        const data = await response.json();
+        
+        const labels = data.map(d => d.month);
+        const values = data.map(d => d.count);
+        
+        new Chart(document.getElementById('quotesChart'), {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Quotes',
+              data: values,
+              borderColor: '#007bff',
+              backgroundColor: 'rgba(0, 123, 255, 0.1)',
+              tension: 0.4,
+              fill: true
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, grid: { color: '#eee' } },
+              x: { grid: { display: false } }
+            }
+          }
+        });
+      } catch (error) {
+        console.error('Error loading quotes monthly:', error);
+      }
+    }
+
+    async function loadClientsBySector() {
+      try {
+        const response = await fetch(`${API_BASE}/analytics/clients-by-sector`, {
+          credentials: 'include'
+        });
+        const data = await response.json();
+        
+        const labels = data.map(d => d.sector || 'Unknown');
+        const values = data.map(d => d.count);
+        const colors = ['#007bff', '#28a745', '#ffc107', '#dc3545', '#6f42c1', '#fd7e14', '#e83e8c', '#17a2b8', '#6610f2', '#66bb6a'];
+        
+        new Chart(document.getElementById('sectorChart'), {
+          type: 'doughnut',
+          data: {
+            labels: labels,
+            datasets: [{
+              data: values,
+              backgroundColor: colors
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'right' } }
+          }
+        });
+      } catch (error) {
+        console.error('Error loading clients by sector:', error);
+      }
+    }
+
+    async function loadTicketsByPriority() {
+      try {
+        const response = await fetch(`${API_BASE}/analytics/tickets-priority`, {
+          credentials: 'include'
+        });
+        const data = await response.json();
+        
+        const labels = data.map(d => d.priority);
+        const values = data.map(d => d.count);
+        const colors = ['#dc3545', '#ffc107', '#28a745', '#007bff'];
+        
+        new Chart(document.getElementById('priorityChart'), {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Tickets',
+              data: values,
+              backgroundColor: colors
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, grid: { color: '#eee' } },
+              x: { grid: { display: false } }
+            }
+          }
+        });
+      } catch (error) {
+        console.error('Error loading tickets by priority:', error);
+      }
+    }
+
+    async function loadTopClients() {
+      try {
+        const response = await fetch(`${API_BASE}/analytics/top-clients`, {
+          credentials: 'include'
+        });
+        const data = await response.json();
+        
+        const tbody = document.getElementById('topClientsBody');
+        tbody.innerHTML = data.map((client, index) => `
+          <tr>
+            <td>#${index + 1}</td>
+            <td>${escapeHtml(client.name)}</td>
+            <td>${client.count}</td>
+          </tr>
+        `).join('');
+      } catch (error) {
+        console.error('Error loading top clients:', error);
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>
